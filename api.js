@@ -82,3 +82,47 @@ async function handleLoad() {
 
 loadBtn.addEventListener("click", handleLoad);
 render();
+// ---------- 6. Create a note (POST) ----------
+function createNote(note) {
+  return request(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=UTF-8" },
+    body: JSON.stringify(note)
+  });
+}
+
+async function handleSubmit(event) {
+  event.preventDefault();
+
+  const title = titleInput.value.trim();
+  const body = bodyInput.value.trim();
+
+  if (title === "") {
+    showStatus("Please type a title first.", "error");
+    return;
+  }
+  if (title.length > 100) {
+    showStatus("The title must be 100 characters or fewer.", "error");
+    return;
+  }
+
+  showStatus("Saving note...", "loading");
+  submitBtn.disabled = true;
+
+  try {
+    const result = await createNote({ title: title, body: body, userId: 1 });
+    notes.unshift(result.data);
+    render();
+    form.reset();
+    showStatus(
+      "Note created (status " + result.status + ", id " + result.data.id + ").",
+      "success"
+    );
+  } catch (error) {
+    showStatus("Sorry, we could not save your note. " + error.message, "error");
+  } finally {
+    submitBtn.disabled = false;
+  }
+}
+
+form.addEventListener("submit", handleSubmit);

@@ -33,6 +33,22 @@ function getNotes() {
   return request(API_URL + "?_limit=10");
 }
 
+function createNote(note) {
+  return request(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json; charset=UTF-8" },
+    body: JSON.stringify(note)
+  });
+}
+
+// JSONPlaceholder is a practice API: it answers "OK" but does not really
+// store or remove anything. Every note we create also gets the same id (101).
+// So after the server answers OK, we remove that exact note from our own
+// notes array (by the object itself, not by id) and draw the list again.
+function removeNoteRequest(id) {
+  return request(API_URL + "/" + id, { method: "DELETE" });
+}
+
 // ---------- 4. Draw the list ----------
 function render() {
   notesList.replaceChildren();
@@ -55,7 +71,15 @@ function render() {
     const body = document.createElement("p");
     body.textContent = note.body;
 
-    li.append(title, body);
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.className = "delete-btn";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.addEventListener("click", function () {
+      handleDelete(note, deleteBtn);
+    });
+
+    li.append(title, body, deleteBtn);
     notesList.append(li);
   }
 }
@@ -71,26 +95,13 @@ async function handleLoad() {
     render();
     showStatus("Loaded " + notes.length + " notes from the server.", "success");
   } catch (error) {
-    showStatus(
-      "Sorry, we could not load your notes. " + error.message,
-      "error",
-    );
+    showStatus("Sorry, we could not load your notes. " + error.message, "error");
   } finally {
     loadBtn.disabled = false;
   }
 }
 
-loadBtn.addEventListener("click", handleLoad);
-render();
 // ---------- 6. Create a note (POST) ----------
-function createNote(note) {
-  return request(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json; charset=UTF-8" },
-    body: JSON.stringify(note)
-  });
-}
-
 async function handleSubmit(event) {
   event.preventDefault();
 
@@ -125,4 +136,25 @@ async function handleSubmit(event) {
   }
 }
 
+// ---------- 7. Delete a note (DELETE) ----------
+async function handleDelete(note, button) {
+  showStatus("Deleting note...", "loading");
+  button.disabled = true;
+
+  try {
+    await removeNoteRequest(note.id);
+    notes = notes.filter(function (item) {
+      return item !== note;
+    });
+    render();
+    showStatus("Note deleted.", "success");
+  } catch (error) {
+    button.disabled = false;
+    showStatus("Sorry, we could not delete that note. " + error.message, "error");
+  }
+}
+
+// ---------- 8. Start ----------
+loadBtn.addEventListener("click", handleLoad);
 form.addEventListener("submit", handleSubmit);
+render();
